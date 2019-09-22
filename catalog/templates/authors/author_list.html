@@ -1,0 +1,23 @@
+{% extends "base_generic.html" %}
+
+{% block content %}
+    <h1>Author List</h1>
+    {% if perms.catalog.can_view_all_borrowed_books %}
+    <p><i><a href="{% url 'author_create' %}">*** Add new author! ***</a></i></p>
+    {% endif %}
+    {% if author_list %}
+    <ul>
+        {% for author in author_list %}
+            <li>
+                <a href="{{ author.get_absolute_url }}">{{ author.last_name }}, {{ author.first_name }} ({{ author.date_of_birth }} - {{ author.date_of_death }})</a>
+                {% if perms.catalog.can_view_all_borrowed_books %} -
+                <a href="{% url 'author_update' author.id %}">Update</a> |
+                <a href="{% url 'author_delete' author.id %}">Delete</a>
+                {% endif %}
+            </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+        <p>There are no authors in the database.</p>
+    {% endif %}
+{% endblock %}

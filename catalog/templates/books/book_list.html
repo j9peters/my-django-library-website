@@ -1,0 +1,23 @@
+{% extends "base_generic.html" %}
+
+{% block content %}
+    <h1>Book List</h1>
+    {% if perms.catalog.can_view_all_borrowed_books %}
+    <p><i><a href="{% url 'create-book' %}">*** Add new book! ***</a></i></p>
+    {% endif %}
+    {% if my_book_list %}
+    <ul>
+        {% for book in my_book_list %}
+            <li>
+                <a href="{{ book.get_absolute_url }}">{{ book.title }}</a> <a href="{{ book.author.get_absolute_url }}">({{ book.author }})</a>
+                {% if perms.catalog.can_view_all_borrowed_books %} -
+                <a href="{% url 'update-book' book.id %}">Update</a> |
+                <a href="{% url 'delete-book' book.id %}">Delete</a>
+                {% endif %}
+            </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+        <p>There are no books in the library.</p>
+    {% endif %}
+{% endblock %}
