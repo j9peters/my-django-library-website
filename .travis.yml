@@ -3,7 +3,8 @@
 language: python
 python: "3.7"  # maps to 3.7.1
 
-services: postgresql
+addons:
+  postgresql: "10.7"
 
 # command to install dependencies
 install:
