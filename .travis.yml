@@ -23,4 +23,4 @@ before_script:
 
 # command to run tests
 script:
-  - python manage.py shell --command="from catalog.models import Genre; Genre.objects.all(); g = Genre(name=\"Comedy\"); g.save(); Genre.objects.all()"
+  - python manage.py shell --command="from catalog.models import Genre; print(Genre.objects.all()); g = Genre(name=\"Comedy\"); g.save(); print(Genre.objects.all())"
