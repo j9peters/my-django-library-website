@@ -6,14 +6,29 @@ python: "3.7"  # maps to 3.7.1
 addons:
   postgresql: "10"
 
+env:
+  - DJANGO_SECRET_KEY=djangosecretkey DJANGO_DB_ENGINE=django.db.backends.postgresql DJANGO_DB_NAME=travis_database DJANGO_DB_USER=travis DJANGO_DB_PASSWORD=travis_password DJANGO_DB_HOST=127.0.0.1 DJANGO_DB_PORT=5432
+
 # command to install dependencies
 install:
   - pip install -r requirements.txt
 
 before_script:
-  - psql -c 'create database travis_ci_test;' -U postgres
+  - psql --version
+  - psql -U postgres
+  - SHOW server_version;
+  - CREATE USER travis WITH PASSWORD 'travis_password';
+  - ALTER USER travis CREATEDB;  # allows Django to create a test database
+  - CREATE DATABASE travis_database OWNER travis;
+  - \quit
+  - python manage.py migrate
 
 # command to run tests
 script:
-  - psql --version
-  - psql -c 'show server_version;' -U postgres
+  - python manage.py shell
+  - from catalog.models import Genre
+  - Genre.objects.all()  # no Genre records should exist in the database at this point
+  - g = Genre(name="Comedy")
+  - g.save()
+  - Genre.objects.all()
+  - quit()
