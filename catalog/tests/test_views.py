@@ -1,4 +1,4 @@
-from django.contrib.auth.models import User  # required to assign User as a borrower
+from django.contrib.auth.models import User, Permission
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -6,6 +6,7 @@ from django.utils import timezone
 from catalog.models import Author, Book, BookInstance, Genre, Language
 
 import datetime
+import uuid
 
 
 class AuthorListViewTest(TestCase):
@@ -138,3 +139,113 @@ class LoanedBookInstancesByUserListViewTest(TestCase):
             else:
                 self.assertTrue(last_date <= book.due_back)
                 last_date = book.due_back
+
+
+class RenewBookInstancesViewTest(TestCase):
+    def setUp(self):
+        test_user1 = User.objects.create_user(username='testuser1', password='drowssap1')
+        test_user2 = User.objects.create_user(username='testuser2', password='drowssap2')
+        test_user1.save()
+        test_user2.save()
+
+        permission = Permission.objects.get(name='Set book as returned')
+        view_all_borrowed_books_permission = Permission.objects.get(name='View all borrowed books')
+        test_user2.user_permissions.add(permission)
+        test_user2.user_permissions.add(view_all_borrowed_books_permission)
+        test_user2.save()
+
+        test_author = Author.objects.create(first_name='John', last_name='Smith')
+        test_genre = Genre.objects.create(name='Fantasy')
+        test_language = Language.objects.create(name='English')
+        test_book = Book.objects.create(
+            title='Book Title',
+            summary='Summary',
+            isbn='ABCDEFG',
+            author=test_author,
+            language=test_language
+        )
+
+        genre_objects_for_book = Genre.objects.all()
+        test_book.genre.set(genre_objects_for_book)  # direct assignment of many-to-many types not allowed
+        test_book.save()
+
+        # create a BookInstance object for test_user1
+        return_date = datetime.date.today() + datetime.timedelta(days=5)
+        self.test_bookinstance1 = BookInstance.objects.create(
+            book=test_book,
+            imprint='Imprint',
+            due_back=return_date,
+            borrower=test_user1,
+            status='o'
+        )
+
+        # create a BookInstance object for test_user2
+        return_date = datetime.date.today() + datetime.timedelta(days=5)
+        self.test_bookinstance2 = BookInstance.objects.create(
+            book=test_book,
+            imprint='Imprint',
+            due_back=return_date,
+            borrower=test_user2,
+            status='o'
+        )
+
+    def test_redirect_if_not_logged_in(self):
+        response = self.client.get(reverse('renew-book-librarian', kwargs={'pk': self.test_bookinstance1.pk}))
+        # manually check redirect (can't use assertRedirect because the redirect URL is unpredictable
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response.url.startswith('/accounts/login/'))
+
+    def test_redirect_if_logged_in_but_not_correct_permission(self):
+        self.client.login(username='testuser1', password='drowssap1')
+        response = self.client.get(reverse('renew-book-librarian', kwargs={'pk': self.test_bookinstance1.pk}))
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response.url.startswith('/accounts/login/'))
+
+    def test_logged_in_with_permission_borrowed_book(self):
+        self.client.login(username='testuser2', password='drowssap2')
+        response = self.client.get(reverse('renew-book-librarian', kwargs={'pk': self.test_bookinstance2.pk}))
+        self.assertEqual(response.status_code, 200)
+
+    def test_logged_in_with_permission_another_users_borrowed_book(self):
+        self.client.login(username='testuser2', password='drowssap2')
+        response = self.client.get(reverse('renew-book-librarian', kwargs={'pk': self.test_bookinstance1.pk}))
+        self.assertEqual(response.status_code, 200)
+
+    def test_HTTP404_for_invalid_book_if_logged_in(self):
+        test_uid = uuid.uuid4()
+        self.client.login(username='testuser2', password='drowssap2')
+        response = self.client.get(reverse('renew-book-librarian', kwargs={'pk': test_uid}))
+        self.assertEqual(response.status_code, 404)
+
+    def test_uses_correct_template(self):
+        self.client.login(username='testuser2', password='drowssap2')
+        response = self.client.get(reverse('renew-book-librarian', kwargs={'pk': self.test_bookinstance1.pk}))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'books/book_renew_librarian.html')
+
+    def test_form_renewal_date_initially_has_date_three_weeks_in_future(self):
+        self.client.login(username='testuser2', password='drowssap2')
+        response = self.client.get(reverse('renew-book-librarian', kwargs={'pk': self.test_bookinstance1.pk}))
+        self.assertEqual(response.status_code, 200)
+        date_3_weeks_in_future = datetime.date.today() + datetime.timedelta(weeks=3)
+        self.assertEqual(response.context['form'].initial['renewal_date'], date_3_weeks_in_future)
+
+    def test_redirects_to_all_borrowed_book_list_on_success(self):
+        self.client.login(username='testuser2', password='drowssap2')
+        valid_date_in_future = datetime.date.today() + datetime.timedelta(weeks=2)
+        response = self.client.post(reverse('renew-book-librarian', kwargs={'pk': self.test_bookinstance1.pk}), {'renewal_date': valid_date_in_future})
+        self.assertRedirects(response, reverse('all-borrowed-books'))
+
+    def test_form_invalid_renewal_date_past(self):
+        self.client.login(username='testuser2', password='drowssap2')
+        date_in_past = datetime.date.today() - datetime.timedelta(weeks=1)
+        response = self.client.post(reverse('renew-book-librarian', kwargs={'pk': self.test_bookinstance1.pk}), {'renewal_date': date_in_past})
+        self.assertEqual(response.status_code, 200)
+        self.assertFormError(response, 'form', 'renewal_date', 'Invalid date - renewal in past')
+
+    def test_form_invalid_renewal_date_future(self):
+        self.client.login(username='testuser2', password='drowssap2')
+        invalid_date_in_future = datetime.date.today() + datetime.timedelta(weeks=5)
+        response = self.client.post(reverse('renew-book-librarian', kwargs={'pk': self.test_bookinstance1.pk}), {'renewal_date': invalid_date_in_future})
+        self.assertEqual(response.status_code, 200)
+        self.assertFormError(response, 'form', 'renewal_date', 'Invalid date - renewal more than 4 weeks ahead')
