@@ -249,3 +249,66 @@ class RenewBookInstancesViewTest(TestCase):
         response = self.client.post(reverse('renew-book-librarian', kwargs={'pk': self.test_bookinstance1.pk}), {'renewal_date': invalid_date_in_future})
         self.assertEqual(response.status_code, 200)
         self.assertFormError(response, 'form', 'renewal_date', 'Invalid date - renewal more than 4 weeks ahead')
+
+
+class AuthorCreateViewTest(TestCase):
+    def test_not_logged_in(self):
+        # attempt to navigate to Author creation page as an anonymous (i.e. not logged in) visitor
+        response = self.client.get(reverse('author_create'))
+        # ensure visitor is redirected to login page
+        self.assertEquals(response.status_code, 302)
+        self.assertTrue(response.url.startswith('/accounts/login/'))
+
+    def test_logged_in_but_no_permission(self):
+        # create user *without* required permission
+        User.objects.create_user(username='userwithoutpermission', password='cantaccesspage')
+        # log in using unauthorized user
+        self.client.login(username='userwithoutpermission', password='cantaccesspage')
+        # navigate to Author creation page
+        response = self.client.get(reverse('author_create'))
+        # ensure unauthorized user is denied access to the page / response's status code is 403 Forbidden
+        self.assertEquals(response.status_code, 403)
+
+    def test_logged_in_with_permission(self):
+        # create user with required permission
+        user = User.objects.create_user(username='thisisauser', password='drowssap')
+        permission = Permission.objects.get(name='View all borrowed books')
+        user.user_permissions.add(permission)
+
+        # log in using authorized user
+        self.client.login(username='thisisauser', password='drowssap')
+        # navigate to Author creation page
+        response = self.client.get(reverse('author_create'))
+
+        # ensure page is accessed successfully
+        self.assertEquals(response.status_code, 200)
+
+        # ensure form displays initial data for date of death
+        self.assertEquals(list(response.context['form'].initial.keys()), ['date_of_death'])
+        # ensure initial data is correct
+        self.assertEquals(response.context['form'].initial['date_of_death'], '05/01/2018')
+
+        # ensure form displays all of the Author model fields
+        form_meta = response.context['form'].Meta
+        self.assertEquals(form_meta.model, Author)
+        self.assertEquals(form_meta.fields, '__all__')
+        self.assertEquals(hasattr(form_meta, 'exclude'), False)
+
+        # Author table currently has no records
+        authors = Author.objects.all()
+        self.assertEquals(len(authors), 0)
+
+        # fill out form with acceptable values, i.e. add new Author to database
+        response = self.client.post(reverse('author_create'), data={'first_name': 'Winnifred', 'last_name': 'Xerxes', 'date_of_birth': '01/01/2001'}, follow=True)
+
+        # newly-created Author has been added to database
+        authors = Author.objects.all()
+        self.assertEquals(len(authors), 1)  # Author table contains 1 record
+        new_author = authors[0]
+        self.assertEquals(str(new_author), 'Xerxes, Winnifred')  # Author table contains the newly-created Author
+
+        # ensure redirects to new Author's detail page on success
+        self.assertRedirects(response, reverse('author-detail', kwargs={'pk': new_author.pk}))
+
+        # ensure correct template is used
+        self.assertTemplateUsed(response, 'authors/author_detail.html')
