@@ -1,0 +1,143 @@
+[
+  {
+    "model": "catalog.genre",
+    "pk": 1,
+    "fields": {
+      "name": "Programming"
+    }
+  },
+  {
+    "model": "catalog.genre",
+    "pk": 2,
+    "fields": {
+      "name": "Comedy"
+    }
+  },
+  {
+    "model": "catalog.genre",
+    "pk": 3,
+    "fields": {
+      "name": "History"
+    }
+  },
+  {
+    "model": "catalog.language",
+    "pk": 1,
+    "fields": {
+      "name": "English"
+    }
+  },
+  {
+    "model": "catalog.language",
+    "pk": 2,
+    "fields": {
+      "name": "German"
+    }
+  },
+  {
+    "model": "catalog.language",
+    "pk": 3,
+    "fields": {
+      "name": "Spanish"
+    }
+  },
+  {
+    "model": "catalog.author",
+    "pk": 1,
+    "fields": {
+      "first_name": "Rod",
+      "last_name": "Nim",
+      "date_of_birth": "2019-07-01",
+      "date_of_death": "2019-07-25"
+    }
+  },
+  {
+    "model": "catalog.author",
+    "pk": 2,
+    "fields": {
+      "first_name": "Al",
+      "last_name": "Mystic",
+      "date_of_birth": "1023-03-10",
+      "date_of_death": "1060-05-02"
+    }
+  },
+  {
+    "model": "catalog.author",
+    "pk": 3,
+    "fields": {
+      "first_name": "Jennifer",
+      "last_name": "Ford",
+      "date_of_birth": "1930-06-09",
+      "date_of_death": "2000-10-03"
+    }
+  },
+  {
+    "model": "catalog.book",
+    "pk": 1,
+    "fields": {
+      "title": "The Frequently Forgotten Fantastic Book",
+      "author": 1,
+      "summary": "Which book were we supposed to summarize, again?",
+      "isbn": "9788013235088",
+      "language": 1,
+      "genre": [1, 2]
+    }
+  },
+  {
+    "model": "catalog.book",
+    "pk": 2,
+    "fields": {
+      "title": "The Cleanest of Very Clean Code",
+      "author": 2,
+      "summary": "Read this book to clean up your code.",
+      "isbn": "9782223275771",
+      "language": 2,
+      "genre": [2]
+    }
+  },
+  {
+    "model": "catalog.book",
+    "pk": 3,
+    "fields": {
+      "title": "Title-y Title",
+      "author": 3,
+      "summary": "Summary-y summary.",
+      "isbn": "9785529945176",
+      "language": 3,
+      "genre": [3]
+    }
+  },
+  {
+    "model": "catalog.bookinstance",
+    "pk": "780622be-638f-4aa9-85d6-79039e2bb72f",
+    "fields": {
+      "book": 1,
+      "imprint": "Imprint 1",
+      "due_back": "3019-07-26",
+      "borrower": null,
+      "status": "o"
+    }
+  },
+  {
+    "model": "catalog.bookinstance",
+    "pk": "791140f9-200b-419e-a80b-41638d3b7ccd",
+    "fields": {
+      "book": 2,
+      "imprint": "Imprint 2",
+      "due_back": "2000-11-15",
+      "borrower": null,
+      "status": "o"
+    }
+  },
+  {
+    "model": "catalog.bookinstance",
+    "pk": "b7ac81aa-bea4-41f0-bf11-4b5737b08f15",
+    "fields": {
+      "book": 3,
+      "imprint": "Imprint 3",
+      "due_back": "1995-08-08",
+      "borrower": null,
+      "status": "m"
+    }
+  }
+]
